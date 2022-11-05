@@ -192,6 +192,10 @@ class ZMQTerminalInteractiveShell(SingletonConfigurable):
         help="The name of a Pygments style to use for syntax highlighting"
     )
 
+    multiline_marker = Unicode('', config=True,
+        help="marker"
+    )
+
     highlighting_style_overrides = Dict(config=True,
         help="Override highlighting format for specific tokens"
     )
@@ -451,6 +455,18 @@ class ZMQTerminalInteractiveShell(SingletonConfigurable):
             async def prompt():
                 prompt = 'In [%d]: ' % self.execution_count
                 raw = await async_input(prompt)
+                print('FUUU ', raw, self.multiline_marker)
+                if self.multiline_marker:
+                  start_marker=  f'{self.multiline_marker}_START'
+                  end_marker=  f'{self.multiline_marker}_START'
+                  if start_marker in raw:
+                    while True:
+                      raw += await async_input(prompt)
+                      if end_marker in raw:
+                        break
+
+                    raw = raw.replace(start_marker, '').replace(end_marker, '')
+
                 return raw
             self.prompt_for_code = prompt
             self.print_out_prompt = \
@@ -639,7 +655,18 @@ class ZMQTerminalInteractiveShell(SingletonConfigurable):
             print('\n', end='')
 
             try:
+
                 code = await self.prompt_for_code()
+                if self.multiline_marker:
+                  start_marker=  f'{self.multiline_marker}_START'
+                  end_marker=  f'{self.multiline_marker}_END'
+                  if start_marker in code:
+                    while True:
+                      code += await self.prompt_for_code()
+                      if end_marker in code:
+                        break
+
+                    code = code.replace(start_marker, '').replace(end_marker, '')
             except EOFError:
                 if (not self.confirm_exit) or \
                         ask_yes_no('Do you really want to exit ([y]/n)?', 'y', 'n'):
